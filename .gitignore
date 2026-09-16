@@ -40,3 +40,14 @@ server/*backup*
 cookies.txt
 downloaded-test.txt
 server/filename
+
+# Database dumps and local database files
+*.sql
+*.dump
+*.sql.gz
+*.sqlite
+*.sqlite3
+
+# Additional backup files
+*.bak
+*.old
