@@ -2802,9 +2802,9 @@ function Dashboard() {
                             height:
                               "100%",
                             objectFit:
-                              "cover",
+                              "contain",
                             objectPosition:
-                              "center 18%",
+                              "center center",
                             display:
                               "block",
                           }}

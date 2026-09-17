@@ -48,16 +48,6 @@ const Home = () => {
     <section id="home" className="portfolio-section">
       <div className="section-container hero-container">
         <div className="hero-content">
-          {profileImage && (
-            <div className="hero-profile">
-              <img
-                src={profileImage}
-                alt={fullName || "Profile"}
-                className="hero-profile-image"
-              />
-            </div>
-          )}
-
           <p className="section-label">
             {loading
               ? "LOADING PROFILE..."
@@ -97,6 +87,18 @@ const Home = () => {
         </div>
 
         <div className="hero-terminal">
+          {profileImage && (
+            <div className="hero-profile">
+              <div className="hero-profile-ring">
+                <img
+                  src={profileImage}
+                  alt={fullName || "Profile"}
+                  className="hero-profile-image"
+                />
+              </div>
+            </div>
+          )}
+
           <div className="terminal-header">
             <div className="terminal-dots">
               <span className="dot red"></span>

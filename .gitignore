@@ -51,3 +51,6 @@ server/filename
 # Additional backup files
 *.bak
 *.old
+
+# Uploaded/generated files
+server/uploads/

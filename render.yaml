@@ -1,0 +1,54 @@
+services:
+  # ============================================================
+  # FRONTEND
+  # ============================================================
+  - type: web
+    name: shija-portfolio
+    runtime: static
+
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: shija-portfolio-api
+          envVarKey: RENDER_EXTERNAL_URL
+
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # ============================================================
+  # BACKEND API
+  # ============================================================
+  - type: web
+    name: shija-portfolio-api
+    runtime: node
+    region: frankfurt
+    plan: free
+
+    rootDir: server
+
+    buildCommand: npm ci
+    startCommand: npm start
+
+    healthCheckPath: /api/health
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      - key: CLIENT_URL
+        sync: false
+
+      - key: DATABASE_URL
+        sync: false
+
+      - key: SESSION_SECRET
+        sync: false
+
+      - key: ENCRYPTION_KEY
+        sync: false

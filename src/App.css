@@ -274,6 +274,7 @@ main {
 ======================================== */
 
 .hero-terminal {
+  position: relative;
   width: 100%;
   background: #090d14;
   border: 1px solid var(--color-border);
@@ -3280,40 +3281,68 @@ main {
   }
 }
 
-
-
 /* ========================================
    HOME PROFILE PHOTO
 ======================================== */
 
 .hero-profile {
+  position: absolute;
+  top: 52px;
+  right: 32px;
+  z-index: 5;
   display: flex;
-  align-items: flex-start;
-  margin-bottom: 18px;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-profile-ring {
+  width: 180px;
+  height: 180px;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-primary);
+  border-radius: 50%;
+  background: #090d14;
+  box-shadow:
+    0 0 0 3px rgba(0, 255, 156, 0.08),
+    0 0 24px rgba(0, 255, 156, 0.18);
+  overflow: hidden;
 }
 
 .hero-profile-image {
-  width: 70px;
-  height: 90px;
+  width: 100%;
+  height: 100%;
   display: block;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center center;
-  border-radius: 2px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  box-shadow: none;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 255, 156, 0.55);
+  background: #090d14;
 }
 
-@media (max-width: 768px) {
-  .hero-profile-image {
-    width: 64px;
-    height: 82px;
+@media (max-width: 900px) {
+  .hero-profile {
+    top: 48px;
+    right: 28px;
+  }
+
+  .hero-profile-ring {
+    width: 150px;
+    height: 150px;
   }
 }
 
-@media (max-width: 480px) {
-  .hero-profile-image {
-    width: 60px;
-    height: 77px;
+@media (max-width: 600px) {
+  .hero-profile {
+    top: 48px;
+    right: 20px;
+  }
+
+  .hero-profile-ring {
+    width: 82px;
+    height: 82px;
+    padding: 3px;
   }
 }

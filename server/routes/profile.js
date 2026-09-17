@@ -105,12 +105,13 @@ const processProfileImage = async (buffer) => {
   const outputPath = path.join(PROFILE_UPLOAD_DIR, filename);
 
   /*
-   * Passport-style portrait crop.
+   * Profile portrait processing.
    *
-   * We intentionally use the upper portion of the image
-   * so lower-body areas are removed.
+   * Keep the original portrait framing instead of performing
+   * an aggressive upper-body crop. This allows the uploaded
+   * image to retain the head, shoulders, and part of the chest.
    *
-   * The crop is then resized proportionally to 350x450.
+   * The final image is normalized to 350x450.
    */
 
   const rotatedBuffer = await sharp(buffer)
@@ -118,70 +119,17 @@ const processProfileImage = async (buffer) => {
     .jpeg()
     .toBuffer();
 
-  const metadata = await sharp(rotatedBuffer).metadata();
-
-  const imageWidth = metadata.width || 1000;
-  const imageHeight = metadata.height || 1000;
-
-  const targetRatio = 350 / 450;
-
-  /*
-   * Use approximately the upper 28% of the original image.
-   * This gives a much tighter head-and-shoulders crop.
-   */
-  let cropHeight = Math.round(imageHeight * 0.28);
-  let cropWidth = Math.round(cropHeight * targetRatio);
-
-  /*
-   * Make sure the crop dimensions are valid.
-   */
-  cropHeight = Math.min(cropHeight, imageHeight);
-  cropWidth = Math.min(cropWidth, imageWidth);
-
-  /*
-   * If the image is unusually narrow, calculate the
-   * height from the available width instead.
-   */
-  if (cropWidth < imageWidth * 0.20) {
-    cropWidth = Math.round(imageWidth * 0.55);
-    cropHeight = Math.round(cropWidth / targetRatio);
-  }
-
-  cropHeight = Math.min(cropHeight, imageHeight);
-  cropWidth = Math.min(cropWidth, imageWidth);
-
-  /*
-   * Keep the crop near the upper-center area.
-   * A small vertical offset prevents excessive empty
-   * background above the head.
-   */
-  const verticalOffset = Math.round(imageHeight * 0.015);
-
-  const cropTop = Math.max(
-    0,
-    Math.min(
-      imageHeight - cropHeight,
-      verticalOffset
-    )
-  );
-
-  const cropLeft = Math.max(
-    0,
-    Math.round((imageWidth - cropWidth) / 2)
-  );
-
   await sharp(rotatedBuffer)
-    .extract({
-      left: cropLeft,
-      top: cropTop,
-      width: cropWidth,
-      height: cropHeight,
-    })
     .resize({
       width: 350,
       height: 450,
-      fit: "cover",
-      position: "center",
+      fit: "contain",
+      background: {
+        r: 9,
+        g: 13,
+        b: 20,
+        alpha: 1,
+      },
     })
     .jpeg({
       quality: 90,
