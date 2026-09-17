@@ -5,10 +5,17 @@ const crypto = require("crypto");
 const multer = require("multer");
 const sharp = require("sharp");
 const { body, validationResult } = require("express-validator");
+const { v2: cloudinary } = require("cloudinary");
 const db = require("../config/database");
 const { requireAdmin } = require("../middleware/auth");
 
 const router = express.Router();
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 const PROFILE_UPLOAD_DIR = path.join(
   __dirname,
@@ -101,25 +108,8 @@ const deleteProfileImageFile = (imagePath) => {
 */
 
 const processProfileImage = async (buffer) => {
-  const filename = `${crypto.randomUUID()}.jpg`;
-  const outputPath = path.join(PROFILE_UPLOAD_DIR, filename);
-
-  /*
-   * Profile portrait processing.
-   *
-   * Keep the original portrait framing instead of performing
-   * an aggressive upper-body crop. This allows the uploaded
-   * image to retain the head, shoulders, and part of the chest.
-   *
-   * The final image is normalized to 350x450.
-   */
-
-  const rotatedBuffer = await sharp(buffer)
+  const processedBuffer = await sharp(buffer)
     .rotate()
-    .jpeg()
-    .toBuffer();
-
-  await sharp(rotatedBuffer)
     .resize({
       width: 350,
       height: 450,
@@ -135,13 +125,71 @@ const processProfileImage = async (buffer) => {
       quality: 90,
       mozjpeg: true,
     })
-    .toFile(outputPath);
+    .toBuffer();
 
-  return {
-    filename,
-    publicPath: `/uploads/profile/${filename}`,
-    filePath: outputPath,
-  };
+  return processedBuffer;
+};
+
+const uploadProfileImageToCloudinary = (buffer) =>
+  new Promise((resolve, reject) => {
+    const publicId = crypto.randomUUID();
+
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: "shija-portfolio/profile",
+        public_id: publicId,
+        resource_type: "image",
+        format: "jpg",
+      },
+      (error, result) => {
+        if (error) {
+          return reject(error);
+        }
+
+        resolve(result);
+      }
+    );
+
+    uploadStream.end(buffer);
+  });
+
+const deleteCloudinaryProfileImage = async (imageUrl) => {
+  if (
+    !imageUrl ||
+    !imageUrl.includes("res.cloudinary.com/")
+  ) {
+    return;
+  }
+
+  try {
+    const marker = "/image/upload/";
+    const markerIndex = imageUrl.indexOf(marker);
+
+    if (markerIndex === -1) {
+      return;
+    }
+
+    let publicId = imageUrl.substring(
+      markerIndex + marker.length
+    );
+
+    publicId = publicId.replace(/^v\d+\//, "");
+    publicId = publicId.replace(/\.[^/.]+$/, "");
+
+    if (!publicId) {
+      return;
+    }
+
+    await cloudinary.uploader.destroy(publicId, {
+      resource_type: "image",
+      type: "upload",
+    });
+  } catch (error) {
+    console.error(
+      "Unable to delete Cloudinary profile image:",
+      error
+    );
+  }
 };
 
 /*
@@ -538,6 +586,11 @@ router.post(
         req.file.buffer
       );
 
+      const cloudinaryResult =
+        await uploadProfileImageToCloudinary(
+          processedImage
+        );
+
       const result = await db.query(
         `UPDATE profile
          SET
@@ -555,17 +608,25 @@ router.post(
           profile_image_path,
           updated_at`,
         [
-          processedImage.publicPath,
+          cloudinaryResult.secure_url,
           req.params.id,
         ]
       );
 
       if (result.rows.length === 0) {
-        if (
-          processedImage.filePath &&
-          fs.existsSync(processedImage.filePath)
-        ) {
-          fs.unlinkSync(processedImage.filePath);
+        try {
+          await cloudinary.uploader.destroy(
+            cloudinaryResult.public_id,
+            {
+              resource_type: "image",
+              type: "upload",
+            }
+          );
+        } catch (cleanupError) {
+          console.error(
+            "Unable to clean uploaded Cloudinary image:",
+            cleanupError
+          );
         }
 
         return res.status(404).json({
@@ -574,6 +635,7 @@ router.post(
         });
       }
 
+      await deleteCloudinaryProfileImage(oldImagePath);
       deleteProfileImageFile(oldImagePath);
 
       return res.json({
@@ -582,21 +644,6 @@ router.post(
         profile: result.rows[0],
       });
     } catch (error) {
-      if (
-        processedImage &&
-        processedImage.filePath &&
-        fs.existsSync(processedImage.filePath)
-      ) {
-        try {
-          fs.unlinkSync(processedImage.filePath);
-        } catch (cleanupError) {
-          console.error(
-            "Unable to clean processed image:",
-            cleanupError
-          );
-        }
-      }
-
       next(error);
     }
   }
@@ -652,6 +699,7 @@ router.delete(
         [req.params.id]
       );
 
+      await deleteCloudinaryProfileImage(oldImagePath);
       deleteProfileImageFile(oldImagePath);
 
       return res.json({
