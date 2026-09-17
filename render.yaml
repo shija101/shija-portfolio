@@ -11,10 +11,7 @@ services:
 
     envVars:
       - key: VITE_API_BASE_URL
-        fromService:
-          type: web
-          name: shija-portfolio-api
-          envVarKey: RENDER_EXTERNAL_URL
+        value: https://shija-portfolio-api.onrender.com/api
 
     routes:
       - type: rewrite
